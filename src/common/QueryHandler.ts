@@ -14,12 +14,20 @@
  * limitations under the License.
  */
 
+import { WaitForSelectorOptions, DOMWorld } from './DOMWorld.js';
+import { ElementHandle } from './JSHandle.js';
+
 export interface QueryHandler {
   queryOne?: (element: Element | Document, selector: string) => Element | null;
   queryAll?: (
     element: Element | Document,
     selector: string
   ) => Element[] | NodeListOf<Element>;
+  waitFor?: (
+    domWorld: DOMWorld,
+    selector: string,
+    options: WaitForSelectorOptions
+  ) => Promise<ElementHandle | null>;
 }
 
 const _customQueryHandlers = new Map<string, QueryHandler>();
@@ -35,6 +43,11 @@ export function registerCustomQueryHandler(
   if (!isValidName)
     throw new Error(`Custom query handler names may only contain [a-zA-Z]`);
 
+  handler.waitFor = (
+    domWorld: DOMWorld,
+    selector: string,
+    options: WaitForSelectorOptions
+  ) => domWorld.waitForSelectorInPage(handler.queryOne, selector, options);
   _customQueryHandlers.set(name, handler);
 }
 
@@ -61,6 +74,16 @@ export function getQueryHandlerAndSelector(
       element.querySelector(selector),
     queryAll: (element: Element, selector: string) =>
       element.querySelectorAll(selector),
+    waitFor: (
+      domWorld: DOMWorld,
+      selector: string,
+      options: WaitForSelectorOptions
+    ) =>
+      domWorld.waitForSelectorInPage(
+        defaultHandler.queryOne,
+        selector,
+        options
+      ),
   };
   const hasCustomQueryHandler = /^[a-zA-Z]+\//.test(selector);
   if (!hasCustomQueryHandler)
